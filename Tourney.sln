@@ -1,0 +1,51 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tourney.AppHost", "Tourney.AppHost\Tourney.AppHost.csproj", "{E8BD9CCF-EEB9-427C-B495-FA8B73AFAEDC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tourney.ServiceDefaults", "Tourney.ServiceDefaults\Tourney.ServiceDefaults.csproj", "{8736C0E6-A062-499D-8F7F-C85159C4B004}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tourney.ApiService", "Tourney.ApiService\Tourney.ApiService.csproj", "{582CFA82-EDFB-46C9-90F4-8623D2FE78F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tourney.Web", "Tourney.Web\Tourney.Web.csproj", "{F8CDD589-2EFA-4307-9CCD-3358503196D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tourney.Tests", "Tourney.Tests\Tourney.Tests.csproj", "{2EC032F1-0E13-49D2-B960-AC50D40B9585}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tourney.Contract", "Tourney.Contract\Tourney.Contract.csproj", "{496F416A-BDBD-48AE-9C9E-8A99D31B8F11}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E8BD9CCF-EEB9-427C-B495-FA8B73AFAEDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8BD9CCF-EEB9-427C-B495-FA8B73AFAEDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8BD9CCF-EEB9-427C-B495-FA8B73AFAEDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8BD9CCF-EEB9-427C-B495-FA8B73AFAEDC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8736C0E6-A062-499D-8F7F-C85159C4B004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8736C0E6-A062-499D-8F7F-C85159C4B004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8736C0E6-A062-499D-8F7F-C85159C4B004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8736C0E6-A062-499D-8F7F-C85159C4B004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{582CFA82-EDFB-46C9-90F4-8623D2FE78F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{582CFA82-EDFB-46C9-90F4-8623D2FE78F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{582CFA82-EDFB-46C9-90F4-8623D2FE78F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{582CFA82-EDFB-46C9-90F4-8623D2FE78F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8CDD589-2EFA-4307-9CCD-3358503196D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8CDD589-2EFA-4307-9CCD-3358503196D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8CDD589-2EFA-4307-9CCD-3358503196D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8CDD589-2EFA-4307-9CCD-3358503196D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2EC032F1-0E13-49D2-B960-AC50D40B9585}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EC032F1-0E13-49D2-B960-AC50D40B9585}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EC032F1-0E13-49D2-B960-AC50D40B9585}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EC032F1-0E13-49D2-B960-AC50D40B9585}.Release|Any CPU.Build.0 = Release|Any CPU
+		{496F416A-BDBD-48AE-9C9E-8A99D31B8F11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{496F416A-BDBD-48AE-9C9E-8A99D31B8F11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{496F416A-BDBD-48AE-9C9E-8A99D31B8F11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{496F416A-BDBD-48AE-9C9E-8A99D31B8F11}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

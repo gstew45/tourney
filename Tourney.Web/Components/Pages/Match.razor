@@ -1,0 +1,209 @@
+﻿@page "/match/{matchId:guid}"
+@using Tourney.Contract
+@rendermode InteractiveServer
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+
+@inject TourneyApiClient TourneyApi
+@inject NavigationManager Navigation
+
+<div class="match-container">
+    <h2>@SelectedMatch?.HomePlayer vs @SelectedMatch?.AwayPlayer</h2>
+
+    <div class="scoreboard">
+        <div class="player @(isHomeTurn ? "active-player" : "")">
+            <h3>@SelectedMatch?.HomePlayer</h3>
+            <p>Legs: @SelectedMatch?.HomeLegsWon</p>
+            <p>Score: @(501 - @homeLeg.Total)</p>
+        </div>
+        <div class="player @(isHomeTurn ? "" : "active-player")">
+            <h3>@SelectedMatch?.AwayPlayer</h3>
+            <p>Legs: @SelectedMatch?.AwayLegsWon</p>
+            <p>Score: @(501 - @awayLeg.Total)</p>
+        </div>
+    </div>
+
+    @if (isMatchFinished)
+    {
+        <h2>🏆 Winner: @SelectedMatch?.Winner! 🏆</h2>
+        <button class="btn btn-secondary mt-3" @onclick="GoBack">Back to Tournament</button>
+    }
+    else 
+    {
+        <div class="turn-indicator">
+            <h3>Current Throw: @(isHomeTurn ? SelectedMatch?.HomePlayer : SelectedMatch?.AwayPlayer)</h3>
+        </div>
+
+        <form class="throw-form" @onsubmit="SubmitThrow">
+            <input type="number"
+            @bind="currentThrow"
+            placeholder="Enter 3-dart score"
+            min="0" max="180"
+            inputmode="numeric"
+            required />
+            <button type="submit">Submit</button>
+        </form>
+    }
+</div>
+
+@code {
+
+    [Parameter] public Guid TournamentId { get; set; }
+    [Parameter] public Guid MatchId { get; set; }
+
+    private MatchResponse? _matchResponse;
+
+    private MatchScore? SelectedMatch;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _matchResponse = await TourneyApi.GetMatchResponseAsync(MatchId);
+        SelectedMatch = new MatchScore(_matchResponse.HomePlayer, _matchResponse.AwayPlayer);
+        ResetLeg();
+
+        isHomeTurn = true;
+        didHomeStartLeg = true;
+    }
+
+    private bool isMatchFinished = false;
+
+    private LegScore homeLeg = new LegScore();
+    private LegScore awayLeg = new LegScore();
+    private int? currentThrow = null; // Holds the input for the current visit (3-dart total)
+
+    private bool didHomeStartLeg = true;
+    private bool isHomeTurn = true;
+
+    private async Task SubmitThrow()
+    {
+        if (currentThrow is null || currentThrow < 0 || currentThrow > 180) // Validate input
+            return;
+
+        if (isHomeTurn)
+        {
+            homeLeg.AddThrow(currentThrow.Value);
+        }
+        else
+        {
+            awayLeg.AddThrow(currentThrow.Value);
+        }
+
+        if (homeLeg.Checkout is not null || awayLeg.Checkout is not null) // Home wins the leg
+        {
+            SelectedMatch?.AddHomeLeg(homeLeg);
+            SelectedMatch?.AddAwayLeg(awayLeg);
+
+            if (IsMatchWon())
+            {
+                await EndMatch();
+                return;
+            }
+
+            ResetLeg();
+            return;
+        }
+
+        isHomeTurn = !isHomeTurn; // Swap turns
+        currentThrow = null; // Reset input field
+    }
+
+    private bool IsMatchWon()
+    {
+        return SelectedMatch?.IsComplete ?? false;
+    }
+
+    private async Task EndMatch()
+    {
+        isMatchFinished = true;
+
+        EndMatchRequest request = new(
+            SelectedMatch.HomePlayer,
+            SelectedMatch.AwayPlayer,
+            SelectedMatch.HomeLegsWon,
+            SelectedMatch.AwayLegsWon,
+            SelectedMatch.HomeLegs.Select(leg => new LegScoreStat(leg.Average, leg.Total, leg.Checkout)),
+            SelectedMatch.AwayLegs.Select(leg => new LegScoreStat(leg.Average, leg.Total, leg.Checkout)));
+
+        await TourneyApi.EndMatchAsync(MatchId, request);
+    }
+
+    private void ResetLeg()
+    {
+        currentThrow = null; // Reset input field
+        homeLeg = new LegScore();
+        awayLeg = new LegScore();
+        isHomeTurn = !didHomeStartLeg;
+        didHomeStartLeg = !didHomeStartLeg;
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("javascript:history.back()");
+    }
+
+    public class LegScore
+    {
+        private readonly List<int> _throws = new List<int>();
+        private int _total = 0;
+
+        public void AddThrow(int throwScore)
+        {
+            _throws.Add(throwScore);
+
+            if (_total + throwScore <= 501)
+            {
+                _total += throwScore;
+            }
+        }
+
+        public double Average => _throws.Average(x => x);
+        public int Total => _total;
+        public int? Checkout => Total == 501 ? _throws.Last() : null;
+    }
+
+    public class MatchScore
+    {
+        public string HomePlayer { get; set; }
+        public string AwayPlayer { get; set; }
+
+        public MatchScore(string homePlayer, string awayPlayer)
+        {
+            HomePlayer = homePlayer;
+            AwayPlayer = awayPlayer;
+        }
+
+        public List<LegScore> HomeLegs { get; } = new List<LegScore>();
+        public List<LegScore> AwayLegs { get; } = new List<LegScore>();
+
+        public int HomeLegsWon => HomeLegs.Count(leg => leg.Checkout is not null);
+        public int AwayLegsWon => AwayLegs.Count(leg => leg.Checkout is not null);
+
+        public bool IsComplete => HomeLegsWon == 2 || AwayLegsWon == 2;
+        public string? Winner => DetermineWinner();
+
+        public void AddHomeLeg(LegScore legScore)
+        {
+            HomeLegs.Add(legScore);
+        }
+
+        public void AddAwayLeg(LegScore legScore)
+        {
+            AwayLegs.Add(legScore);
+        }
+
+        private string? DetermineWinner()
+        {
+            if (HomeLegsWon == 2)
+            {
+                return HomePlayer;
+            }
+
+            if (AwayLegsWon == 2)
+            {
+                return AwayPlayer;
+            }
+
+            return null;
+        }
+    }
+}

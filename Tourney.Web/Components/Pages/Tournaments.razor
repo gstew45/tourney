@@ -1,0 +1,121 @@
+﻿@page "/tournaments"
+@using Tourney.Contract
+@rendermode InteractiveServer
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+
+@inject TourneyApiClient TourneyApi
+@inject NavigationManager Navigation
+
+<PageTitle>Tournaments</PageTitle>
+
+<h1>Tournaments</h1>
+
+@if (tournaments == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <button class="btn btn-primary" @onclick="OpenModal">Create New Tournament</button>
+
+    @if (IsModalOpen)
+    {
+        <div class="modal-backdrop" @onclick="CloseModal"></div>
+        <div class="modal d-block">
+            <!-- d-block ensures visibility -->
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create Tournament</h5>
+                        <button class="close" @onclick="CloseModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Tournament Name</label>
+                            <input class="form-control" @bind="TournamentName" />
+                        </div>
+                        <div class="form-group">
+                            <label>League Rounds</label>
+                            <input type="number" class="form-control" @bind="LeagueRounds" />
+                        </div>
+                        <div class="form-group">
+                            <label>Players</label>
+                            <input class="form-control mb-2" @bind="Players[0]" placeholder="Player 1" />
+                            <input class="form-control mb-2" @bind="Players[1]" placeholder="Player 2" />
+                            <input class="form-control mb-2" @bind="Players[2]" placeholder="Player 3" />
+                            <input class="form-control mb-2" @bind="Players[3]" placeholder="Player 4" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" @onclick="SubmitTournament">Submit</button>
+                        <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Players</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tournament in tournaments)
+            {
+                <tr>
+                    <td>@tournament.Name</td>
+                    <td>@tournament.Players.Count()</td>
+                    <td>@tournament.Status</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => NavigateToTournament(tournament.Id)">Open Tournament</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private TournamentResponse[]? tournaments;
+
+    private bool IsModalOpen = false;
+    private string TournamentName = "";
+    private int LeagueRounds = 1;
+    private string[] Players = new string[4];
+
+    protected override async Task OnInitializedAsync()
+    {
+        tournaments = await TourneyApi.GetTournamentsAsync();
+    }
+
+    private void OpenModal()
+    {
+        IsModalOpen = true;
+        StateHasChanged(); // Ensure UI updates
+    }
+
+    private void CloseModal()
+    {
+        IsModalOpen = false;
+        StateHasChanged();
+    }
+
+    private async Task SubmitTournament()
+    {
+        var tournament = new CreateTournamentRequest(TournamentName, Players, LeagueRounds);
+
+        await TourneyApi.CreateTournamentAsync(tournament);
+        CloseModal();
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true); // Refresh the page
+    }
+
+    private void NavigateToTournament(Guid tournamentId)
+    {
+        Navigation.NavigateTo($"/tournament/{tournamentId}");
+    }
+}

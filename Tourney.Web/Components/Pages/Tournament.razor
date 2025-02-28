@@ -1,0 +1,266 @@
+﻿@page "/tournament/{id:guid}"
+@using Tourney.Contract
+@rendermode InteractiveServer
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+
+@inject TourneyApiClient TourneyApi
+@inject NavigationManager Navigation
+
+
+<h3>@(SelectedTournament?.Name ?? "Loading...")</h3>
+
+@if (SelectedTournament is not null)
+{
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="@GetTabClass("overview")" @onclick='() => SelectTab("overview")'>Overview</button>
+        <button class="@GetTabClass("league")" @onclick='() => SelectTab("league")'>League</button>
+        <button class="@GetTabClass("knockout")" @onclick='() => SelectTab("knockout")'>Knockout</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        @if (_selectedTab == "overview")
+        {
+            @if (CurrentMatch is not null)
+            {
+                <h4>Overview</h4>
+                <h5>Current Match</h5>
+                <div class="card shadow-sm p-3 mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">@GetCurrentMatchHeaderStatus()</h5>
+
+                        @if (CurrentMatch.Status == MatchStatus.InProgress)
+                        {
+                            <p class="card-text">
+                                <strong>Score:</strong> @CurrentMatch.HomeScore - @CurrentMatch.AwayScore
+                            </p>
+
+                            <button class="btn btn-primary" @onclick="() => ViewMatch(CurrentMatch.Id)">View Match</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary" @onclick="async () => await StartMatch(CurrentMatch.Id)">Start Match</button>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <h4>Tournament Winner: @GetWinner(Bracket.SelectMany(round => round.Matches).Last(match => match.Status == MatchStatus.Complete))</h4>
+            }
+
+            @if (SelectedTournament.LeagueMatches.Where(x => x.Status != MatchStatus.Complete).Any())
+            {
+                <h5>Upcoming</h5>
+                <ul class="list-group">
+                    @foreach (var match in SelectedTournament.LeagueMatches.Where(x => x.Id != CurrentMatch?.Id && x.Status != MatchStatus.Complete))
+                    {
+                        <li class="list-group-item">
+                            @match.HomePlayer vs @match.AwayPlayer
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p>No upcoming league matches to play.</p>
+            }
+        }
+        else if (_selectedTab == "league")
+        {
+            <h4>League</h4>
+            <!-- Standings to go here -->
+            @if (LeagueStandings is null)
+            {
+                <p>Loading standings...</p>
+            }
+            else
+            {
+                <table class="league-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Player</th>
+                            <th>Played</th>
+                            <th>Wins</th>
+                            <th>Legs</th>
+                            <th>Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < LeagueStandings.Length; i++)
+                        {
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td>@LeagueStandings[i].Name</td>
+                                <td>@LeagueStandings[i].Played</td>
+                                <td>@LeagueStandings[i].MatchWins</td>
+                                <td>@LeagueStandings[i].LegWins</td>
+                                <td>@LeagueStandings[i].TotalPoints</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            <h5>Results</h5>
+            @if (SelectedTournament.LeagueMatches.Where(x => x.Status == MatchStatus.Complete).Any())
+            {
+                <ul class="list-group">
+                    @foreach (var match in SelectedTournament.LeagueMatches)
+                    {
+                        <li class="list-group-item">
+                            @match.HomePlayer (@match.HomeScore) vs (@match.AwayScore) @match.AwayPlayer
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p>No matches have been completed yet.</p>
+            }
+        }
+        else if (_selectedTab == "knockout")
+        {
+            <h4>Knockout</h4>
+            <div class="bracket">
+                @foreach (var round in Bracket)
+                {
+                    <div class="round">
+                        <h4>Round @round.Number</h4>
+                        <div class="matches">
+                            @foreach (var match in round.Matches)
+                            {
+                                <div class="match-card @GetMatchClass(match.Status)">
+                                    <div class="match-info">
+                                        <span class="player-name">@(match.HomePlayer ?? "TBC")</span> vs <span class="player-name">@(match.AwayPlayer  ?? "TBC")</span>
+                                    </div>
+                                    <div class="match-score">
+                                        @if (match.Status == MatchStatus.NotStarted)
+                                        {
+                                            <span>Not Started</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@match.HomeScore - @match.AwayScore</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+
+
+    <button class="btn btn-secondary mt-3" @onclick="GoBack">Back</button>
+}
+else
+{
+    <p>Loading tournament details...</p>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private TournamentResponse? SelectedTournament;
+    private MatchResponse? CurrentMatch;
+    private TeamStatsResponse[]? LeagueStandings;
+    private RoundResponse[]? Bracket;
+    private string _selectedTab = "overview"; // Default tab
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedTournament = await TourneyApi.GetTournamentByIdAsync(Id);
+        LeagueStandings = await TourneyApi.GetLeagueStandingsAsync(Id);
+
+        MatchResponse? nextLeagueMatch = SelectedTournament.LeagueMatches.FirstOrDefault(x => x.Status != MatchStatus.Complete);
+        if (nextLeagueMatch != null)
+        {
+            CurrentMatch = nextLeagueMatch;
+            Bracket = await TourneyApi.GetBracketPlaceholderAsync(Id);
+        }
+        else
+        {
+            // Get the bracket, it will create it if it doesnt exist...
+            Bracket = await TourneyApi.GetBracketAsync(Id);
+            MatchResponse? nextBracketMatch = Bracket.SelectMany(round => round.Matches).FirstOrDefault(x => x.Status != MatchStatus.Complete);
+            if (nextBracketMatch != null)
+            {
+                CurrentMatch = nextBracketMatch;
+            }
+        }
+    }
+
+
+    private void SelectTab(string tab)
+    {
+        _selectedTab = tab;
+    }
+
+    private string GetTabClass(string tab)
+    {
+        return _selectedTab == tab ? "tab active" : "tab";
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/tournaments");
+    }
+
+
+    string? GetWinner(MatchResponse match)
+    {
+        if (match.Status == MatchStatus.Complete)
+        {
+            return match.HomeScore > match.AwayScore ? match.HomePlayer : match.AwayPlayer;
+        }
+
+        return string.Empty;
+    }
+
+    private async Task StartMatch(Guid matchId)
+    {
+        await TourneyApi.StartMatchAsync(matchId);
+        Navigation.NavigateTo($"/match/{matchId}");
+    }
+
+    private void ViewMatch(Guid matchId)
+    {
+        Navigation.NavigateTo($"/match/{matchId}");
+    }
+
+    private string GetCurrentMatchHeaderStatus()
+    {
+        if (CurrentMatch is null)
+        {
+            return string.Empty;
+        }
+        return $"{CurrentMatch.HomePlayer} vs {CurrentMatch.AwayPlayer} {GetReadableMatchStatus(CurrentMatch)}";
+    }
+
+    private string GetReadableMatchStatus(MatchResponse match)
+    {
+        return match.Status switch
+        {
+            MatchStatus.InProgress => "- In Progress",
+            _ => string.Empty
+        };
+    }
+
+    private string GetMatchClass(MatchStatus status)
+    {
+        return status switch
+        {
+            MatchStatus.NotStarted => "match-not-started",
+            MatchStatus.InProgress => "match-in-progress",
+            MatchStatus.Complete => "match-completed",
+            _ => "match-not-started"
+        };
+    }
+}
